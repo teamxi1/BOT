@@ -3,8 +3,8 @@ const pino = require('pino')
 const fs = require('fs')
 
 async function startGaelXit() {
-    const settings = JSON.parse(fs.readFileSync('./settings/settings.json'))
-    const { state, saveCreds } = await useMultiFileAuthState('./database/session')
+    const settings = JSON.parse(fs.readFileSync('./settings.json'))
+    const { state, saveCreds } = await useMultiFileAuthState('./session')
     
     const conn = makeWASocket({
         logger: pino({ level: 'silent' }),
@@ -13,12 +13,12 @@ async function startGaelXit() {
         browser: ["Gael Xit", "Chrome", "1.0.0"]
     })
 
-    // VINCULACIÓN POR CÓDIGO AUTOMÁTICA
+    // Vinculación por Código de 8 dígitos
     if (!conn.authState.creds.registered) {
         let num = settings.ownerNumber.replace(/[^0-9]/g, '')
         setTimeout(async () => {
             let code = await conn.requestPairingCode(num)
-            console.log(`\n✅ TU CÓDIGO GAEL XIT: ${code}\n`)
+            console.log(`\n🔥 TU CÓDIGO GAEL XIT: ${code}\n`)
         }, 3000)
     }
 
@@ -32,46 +32,35 @@ async function startGaelXit() {
         const isGroup = from.endsWith('@g.us')
         const prefix = settings.prefix
 
-        // COMANDO MENU (EL QUE PASASTE)
+        // COMANDO MENU
         if (body.startsWith(prefix + 'menu')) {
             const menuFinal = `
 ​╭───────────────╼
 │  🐍 GAEL XIT - MODO TÓXICO
 ├───────────────╼
-│ 🕵️ ${prefix}fakechat [texto]
-│ 🤥 ${prefix}detectar [@user]
-│ 💔 ${prefix}funar [@user]
-│ 👁️ ${prefix}stalk [@user]
-│ 💣 ${prefix}spam [texto]
+│ 🕵️ .fakechat | 🤥 .detectar
+│ 💔 .funar | 👁️ .stalk | 💣 .spam
 ╰───────────────╼
 ​╭───────────────╼
 │  💀 ZONA PROHIBIDA / TURBIO
 ├───────────────╼
-│ 🧟 ${prefix}dark
-│ 💉 ${prefix}hospital
-│ 🩸 ${prefix}snuff
-│ 💊 ${prefix}drogas
-│ 🦴 ${prefix}anatomia
+│ 🧟 .dark | 💉 .hospital | 🩸 .snuff
+│ 💊 .drogas | 🦴 .anatomia
 ╰───────────────╼
 ​╭───────────────╼
 │  🔞 ZONA VIP EXTREMA (+18)
 ├───────────────╼
-│ 👙 ${prefix}swimsuit
-│ 🍑 ${prefix}panties
-│ 💋 ${prefix}thighs
-│ 🔞 ${prefix}xnxx [busqueda]
-│ 💦 ${prefix}squirt
+│ 👙 .swimsuit | 🍑 .panties
+│ 💋 .thighs | 💦 .squirt
+│ 🔞 .xnxx [búsqueda]
 ╰───────────────╼
 ​╭───────────────╼
-│  🛡️ GESTIÓN DE GRUPO (ADMINS)
+│  🛡️ GESTIÓN DE GRUPO
 ├───────────────╼
-│ 🚫 ${prefix}kick @user (Sacar)
-│ 📩 ${prefix}add [número] (Meter)
-│ 👑 ${prefix}promote @user (Dar Admin)
-│ ⚡ ${prefix}demote @user (Quitar Admin)
+│ 🚫 .kick @user | 📩 .add [núm]
+│ 👑 .promote | ⚡ .demote
 ╰───────────────╼
-
-🔥 *BY: GAEL XIT*`.trim()
+🔥 *BY: GAEL XIT*`
 
             await conn.sendMessage(from, { 
                 image: { url: settings.img }, 
@@ -80,25 +69,21 @@ async function startGaelXit() {
             }, { quoted: m })
         }
 
-        // --- LÓGICA DE ADMINISTRACIÓN ---
-        if (body.startsWith(prefix + 'kick') && isGroup) {
-            let user = m.message.extendedTextMessage?.contextInfo?.mentionedJid[0]
-            if (user) await conn.groupParticipantsUpdate(from, [user], "remove")
-        }
+        // Comandos de Administración
+        if (isGroup) {
+            const groupMetadata = await conn.groupMetadata(from)
+            const participants = groupMetadata.participants
+            const mentioned = m.message.extendedTextMessage?.contextInfo?.mentionedJid[0]
 
-        if (body.startsWith(prefix + 'add') && isGroup) {
-            let num = body.split(' ')[1] + "@s.whatsapp.net"
-            await conn.groupParticipantsUpdate(from, [num], "add")
-        }
-
-        if (body.startsWith(prefix + 'promote') && isGroup) {
-            let user = m.message.extendedTextMessage?.contextInfo?.mentionedJid[0]
-            if (user) await conn.groupParticipantsUpdate(from, [user], "promote")
-        }
-
-        if (body.startsWith(prefix + 'demote') && isGroup) {
-            let user = m.message.extendedTextMessage?.contextInfo?.mentionedJid[0]
-            if (user) await conn.groupParticipantsUpdate(from, [user], "demote")
+            if (body.startsWith(prefix + 'kick')) {
+                if (mentioned) await conn.groupParticipantsUpdate(from, [mentioned], "remove")
+            }
+            if (body.startsWith(prefix + 'promote')) {
+                if (mentioned) await conn.groupParticipantsUpdate(from, [mentioned], "promote")
+            }
+            if (body.startsWith(prefix + 'demote')) {
+                if (mentioned) await conn.groupParticipantsUpdate(from, [mentioned], "demote")
+            }
         }
     })
 }
